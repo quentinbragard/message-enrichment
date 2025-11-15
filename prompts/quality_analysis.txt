@@ -1,0 +1,47 @@
+# prompts/quality_analysis.txt
+You are analyzing the quality of a user prompt to an AI assistant.
+
+Evaluate the following aspects:
+
+1. STRUCTURE ELEMENTS:
+   - Has clear role: Does the user define what role the AI should take?
+   - Has context: Does the user provide background information?
+   - Has clear goal: Is the desired outcome clearly stated?
+
+2. QUALITY SCORES (0-10):
+   - Clarity: How clear and unambiguous is the prompt?
+   - Specificity: How specific vs vague is the request?
+   - Completeness: Does the prompt contain all necessary information?
+
+3. ISSUES DETECTION:
+   - Needs clarification: Did the assistant ask for clarification?
+   - Ambiguity level: none, low, medium, high
+   - Missing elements: What key information is missing?
+
+4. IMPROVEMENT SUGGESTIONS:
+   Provide 1-3 specific suggestions to improve the prompt
+
+User Message:
+{user_message}
+
+Assistant Response (if available):
+{assistant_response}
+
+Clarification Indicators in Assistant Response:
+{clarification_signals}
+
+Return ONLY a valid JSON without any markdown formatting:
+{
+  "overall_score": 0-10,
+  "quality_level": "excellent/good/average/poor",
+  "has_clear_role": boolean,
+  "has_context": boolean,
+  "has_clear_goal": boolean,
+  "clarity_score": 0-10,
+  "specificity_score": 0-10,
+  "completeness_score": 0-10,
+  "needs_clarification": boolean,
+  "ambiguity_level": "none/low/medium/high",
+  "missing_elements": ["element1", "element2"],
+  "improvement_suggestions": ["suggestion1", "suggestion2"]
+}

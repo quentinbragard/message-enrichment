@@ -1,0 +1,34 @@
+# prompts/pii_detection.txt
+Analyze the following text for personally identifiable information (PII).
+
+Look for:
+1. Names (first and last names)
+2. Email addresses
+3. Phone numbers
+4. Physical addresses
+5. Social security numbers
+6. Credit card numbers
+7. Bank account numbers
+8. Driver's license numbers
+9. Passport numbers
+10. Medical information
+11. IP addresses
+12. Usernames/passwords
+
+Text to analyze:
+{content}
+
+Return ONLY a valid JSON without markdown:
+{
+  "has_pii": boolean,
+  "pii_types": ["type1", "type2"],
+  "risk_level": "critical/high/medium/low/none",
+  "entities": [
+    {
+      "type": "email",
+      "value": "masked_value",
+      "confidence": "high/medium/low"
+    }
+  ],
+  "recommendation": "string"
+}

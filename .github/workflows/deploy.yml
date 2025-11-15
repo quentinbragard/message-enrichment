@@ -1,0 +1,63 @@
+# .github/workflows/deploy.yml
+name: Deploy Enrichment Service to GCP
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  pull_request:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: europe-west1
+  SERVICE_NAME: enrichment-service
+
+jobs:
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      
+      - name: Configure Docker
+        run: gcloud auth configure-docker
+      
+      - name: Build and Push Docker image
+        run: |
+          docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA .
+          docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA
+      
+      - name: Deploy API to Cloud Run
+        run: |
+          gcloud run deploy $SERVICE_NAME-api \
+            --image gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
+            --region $REGION \
+            --platform managed \
+            --memory 2Gi \
+            --cpu 2 \
+            --min-instances 2 \
+            --max-instances 100 \
+            --set-env-vars SERVICE_MODE=api
+      
+      - name: Deploy Worker to Cloud Run
+        run: |
+          gcloud run deploy $SERVICE_NAME-worker \
+            --image gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA \
+            --region $REGION \
+            --platform managed \
+            --memory 4Gi \
+            --cpu 2 \
+            --min-instances 5 \
+            --max-instances 50 \
+            --set-env-vars SERVICE_MODE=worker

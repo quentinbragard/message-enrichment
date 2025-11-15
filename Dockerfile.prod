@@ -1,0 +1,28 @@
+# Dockerfile.prod
+FROM python:3.10-slim as builder
+
+WORKDIR /app
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.10-slim
+WORKDIR /app
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY . .
+
+ENV PORT=8080
+ENV SERVICE_MODE=api
+
+RUN useradd -m appuser
+USER appuser
+
+CMD if [ "$SERVICE_MODE" = "worker" ]; then \
+      python -m workers.enrichment_worker; \
+    else \
+      uvicorn main:app --host 0.0.0.0 --port $PORT; \
+    fi

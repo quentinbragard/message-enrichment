@@ -1,0 +1,61 @@
+# prompts/unified_classification.txt
+You are analyzing a conversation between a user and an AI assistant.
+
+Analyze the following and return a JSON with these classifications:
+
+1. WORK CLASSIFICATION:
+   - is_work: Is this related to professional/work activities?
+   - work_type: email, report, analysis, coding, meeting, documentation, other
+   - Consider: emails, reports, analysis, professional communication
+   - If assistant provides business advice or professional content, it's likely work
+
+2. TOPIC CLASSIFICATION:
+   Choose the primary topic:
+   - WRITING: Content creation, editing, translation
+   - ANALYSIS: Data analysis, research, investigation  
+   - TECHNICAL: Programming, engineering, technical help
+   - COMMUNICATION: Emails, messages, presentations
+   - LEARNING: Education, training, skill development
+   - CREATIVE: Art, design, creative projects
+   - PERSONAL: Personal life, entertainment, casual chat
+   
+3. INTENT CLASSIFICATION:
+   - ASKING: Seeking information, advice, clarification
+   - DOING: Requesting action, creation, execution
+   - EXPRESSING: Sharing thoughts, venting, social interaction
+
+Consider the assistant's response to better understand the user's intent:
+- If the assistant provides specific solutions, the intent was likely DOING
+- If the assistant provides information/explanation, the intent was likely ASKING
+
+User Message:
+{user_message}
+
+Assistant Response (if available):
+{assistant_response}
+
+Conversation History (last 3 messages):
+{conversation_history}
+
+Return ONLY a valid JSON without any markdown formatting:
+{
+  "work": {
+    "is_work": boolean,
+    "work_type": "string or null",
+    "confidence": "high/medium/low",
+    "reasoning": "brief explanation",
+    "signals": ["signal1", "signal2"]
+  },
+  "topic": {
+    "primary": "TOPIC_NAME",
+    "sub_topics": ["sub1", "sub2"],
+    "confidence": "high/medium/low",
+    "keywords": ["key1", "key2"]
+  },
+  "intent": {
+    "primary": "ASKING/DOING/EXPRESSING",
+    "detailed": "asking_clarification/doing_creation/etc",
+    "confidence": "high/medium/low",
+    "used_assistant_response": boolean
+  }
+}

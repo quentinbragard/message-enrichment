@@ -1,0 +1,31 @@
+# requirements.txt
+# FastAPI
+fastapi
+uvicorn[standard]
+pydantic
+
+# GCP
+google-cloud-pubsub
+google-cloud-redis
+google-cloud-monitoring
+google-cloud-logging
+
+# LLM
+openai
+httpx
+
+# Database
+supabase
+
+# Cache
+redis
+hiredis
+
+# Utils
+python-dotenv
+tenacity
+
+# Dev
+pytest
+pytest-asyncio
+black
