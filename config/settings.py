@@ -39,8 +39,8 @@ class BaseSettings:
     SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
     
     # LLM
-    HF_TOKEN: str = os.getenv("HF_TOKEN", "")
-    DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "google/gemma-2-9b-it:nebius")
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    DEFAULT_MODEL: str = os.getenv("DEFAULT_MODEL", "gpt-4.1-nano")
     
     # Service
     SERVICE_NAME: str = "enrichment-service"

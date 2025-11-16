@@ -38,24 +38,24 @@ Conversation History (last 3 messages):
 {conversation_history}
 
 Return ONLY a valid JSON without any markdown formatting:
-{
-  "work": {
+{{
+  "work": {{
     "is_work": boolean,
     "work_type": "string or null",
     "confidence": "high/medium/low",
     "reasoning": "brief explanation",
     "signals": ["signal1", "signal2"]
-  },
-  "topic": {
+  }},
+  "topic": {{
     "primary": "TOPIC_NAME",
     "sub_topics": ["sub1", "sub2"],
     "confidence": "high/medium/low",
     "keywords": ["key1", "key2"]
-  },
-  "intent": {
+  }},
+  "intent": {{
     "primary": "ASKING/DOING/EXPRESSING",
     "detailed": "asking_clarification/doing_creation/etc",
     "confidence": "high/medium/low",
     "used_assistant_response": boolean
-  }
-}
+  }}
+}}

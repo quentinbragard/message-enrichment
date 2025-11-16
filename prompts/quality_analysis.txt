@@ -31,7 +31,7 @@ Clarification Indicators in Assistant Response:
 {clarification_signals}
 
 Return ONLY a valid JSON without any markdown formatting:
-{
+{{
   "overall_score": 0-10,
   "quality_level": "excellent/good/average/poor",
   "has_clear_role": boolean,
@@ -44,4 +44,4 @@ Return ONLY a valid JSON without any markdown formatting:
   "ambiguity_level": "none/low/medium/high",
   "missing_elements": ["element1", "element2"],
   "improvement_suggestions": ["suggestion1", "suggestion2"]
-}
+}}

@@ -8,6 +8,7 @@ import json
 from datetime import datetime
 from typing import Optional, Dict, List, Set
 from uuid import uuid4
+from config import settings
 
 from domains.entities import EnrichmentResult
 from dtos import (
@@ -330,7 +331,7 @@ class EnrichmentService:
             "pii_detection": pii,
             "overall_confidence": self._calculate_overall_confidence(classification),
             "used_assistant_response": bool(request.assistant_response),
-            "model_used": "gemma-9b"
+            "model_used": getattr(settings, "DEFAULT_MODEL", "gpt-4.1-nano")
         }
     
     def _calculate_processing_time(self, start_time: datetime) -> float:

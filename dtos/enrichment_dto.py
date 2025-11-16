@@ -384,7 +384,7 @@ class EnrichmentResultDTO(BaseModel):
                 },
                 "overall_confidence": 0.85,
                 "used_assistant_response": False,
-                "model_used": "gemma-9b",
+                "model_used": "gpt-4.1-nano",
                 "cache_hit": False
             }
         }

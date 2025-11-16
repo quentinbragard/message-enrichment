@@ -1,199 +1,171 @@
-# core/llm.py - HuggingFace with detailed logging
-"""
-LLM client using HuggingFace API with comprehensive logging
-"""
-from typing import Optional
+# core/llm.py - OpenAI client
+"""Async LLM client using OpenAI Chat Completions API"""
+from typing import Iterable, Optional
 from config import settings
 import logging
-import json
 import os
-import httpx
-import traceback
+import asyncio
+import json
+from openai import AsyncOpenAI
 
-# Configure detailed logging
-logging.basicConfig(level=logging.DEBUG)
+
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class LLMClient:
-    """LLM client using HuggingFace Inference API with detailed logging"""
-    
+    """LLM client targeting gpt-4.1-nano for lowest cost."""
+
     def __init__(self, model: Optional[str] = None):
-        self.model = model or "mistralai/Mistral-7B-Instruct-v0.2"
-        self.api_key = os.getenv("HF_TOKEN") or settings.HF_TOKEN
-        
-        # HuggingFace Inference API endpoint
-        self.base_url = f"https://router.huggingface.co/hf-inference/models/{self.model}"
-        
-        logger.info("="*60)
-        logger.info("INITIALIZING HUGGINGFACE LLM CLIENT")
+        api_key = os.getenv("OPENAI_API_KEY") or getattr(settings, "OPENAI_API_KEY", "")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY is required for LLM access")
+
+        self.model = model or getattr(settings, "DEFAULT_MODEL", "gpt-4.1-nano")
+        self.client = AsyncOpenAI(api_key=api_key)
+
+        logger.info("Initialized OpenAI LLM client")
         logger.info(f"Model: {self.model}")
-        logger.info(f"API Key present: {bool(self.api_key)}")
-        logger.info(f"API Key (first 10 chars): {self.api_key[:10] if self.api_key else 'NOT SET'}...")
-        logger.info(f"Base URL: {self.base_url}")
-        logger.info("="*60)
-        
-        if not self.api_key:
-            logger.error("HF_TOKEN not found in environment variables!")
-            raise ValueError("HF_TOKEN required. Get it from https://huggingface.co/settings/tokens")
-    
+
     async def complete(
         self,
         system_prompt: str,
         user_message: str,
         temperature: float = 0.1,
-        max_tokens: int = 500
+        max_tokens: int = 500,
     ) -> str:
-        """Get completion from HuggingFace with detailed logging"""
-        
-        logger.info("\n" + "="*60)
-        logger.info("STARTING LLM COMPLETION REQUEST")
-        logger.info("="*60)
-        
-        # Log input details
-        logger.debug(f"System prompt: {system_prompt[:200]}...")
-        logger.debug(f"User message length: {len(user_message)} chars")
-        logger.debug(f"User message preview: {user_message[:300]}...")
-        logger.debug(f"Temperature: {temperature}")
-        logger.debug(f"Max tokens: {max_tokens}")
-        
-        try:
-            # Format the full prompt for HuggingFace
-            # Most HF models expect a specific format
-            full_prompt = f"""<s>[INST] <<SYS>>
-{system_prompt}
+        """Single completion using Chat Completions API."""
 
-You must return ONLY valid JSON without any markdown formatting or backticks.
-<</SYS>>
+        response = await self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            temperature=temperature,
+            max_tokens=max_tokens,
+            response_format={"type": "json_object"},
+        )
 
-{user_message}
+        return self._extract_text(response)
 
-Remember: Return ONLY the JSON object, no explanations or markdown. [/INST]"""
-            
-            logger.debug(f"Full prompt length: {len(full_prompt)} chars")
-            logger.debug(f"Full prompt:\n{full_prompt[:500]}...")
-            
-            # Prepare the request
-            request_data = {
-                "inputs": full_prompt,
-                "parameters": {
-                    "temperature": temperature,
-                    "max_new_tokens": max_tokens,
-                    "return_full_text": False,
-                    "do_sample": False if temperature == 0 else True
-                }
-            }
-            
-            logger.info(f"Sending request to HuggingFace API...")
-            logger.debug(f"Request headers: Authorization=Bearer {self.api_key[:10]}...")
-            logger.debug(f"Request data: {json.dumps(request_data, indent=2)}")
-            
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    self.base_url,
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json=request_data
+    async def complete_batch(
+        self,
+        system_prompt: str,
+        user_messages: Iterable[str],
+        temperature: float = 0.1,
+        max_tokens: int = 500,
+    ) -> list[str]:
+        """Run multiple prompts concurrently; still uses cheapest model."""
+
+        tasks = [
+            asyncio.create_task(
+                self.complete(
+                    system_prompt=system_prompt,
+                    user_message=message,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
                 )
-                
-                logger.info(f"Response status code: {response.status_code}")
-                logger.debug(f"Response headers: {dict(response.headers)}")
-                
-                if response.status_code == 503:
-                    logger.error("Model is loading, please retry in a few seconds")
-                    error_data = response.json()
-                    logger.error(f"503 Error details: {json.dumps(error_data, indent=2)}")
-                    raise Exception("Model is loading, please retry")
-                
-                if response.status_code != 200:
-                    error_text = response.text
-                    logger.error(f"HuggingFace API error {response.status_code}")
-                    logger.error(f"Error response: {error_text}")
-                    raise Exception(f"HuggingFace API error {response.status_code}: {error_text}")
-                
-                # Parse response
-                data = response.json()
-                logger.debug(f"Raw API response: {json.dumps(data, indent=2)[:1000]}")
-                
-                # Extract the generated text
-                if isinstance(data, list) and len(data) > 0:
-                    result = data[0].get("generated_text", "")
-                elif isinstance(data, dict):
-                    result = data.get("generated_text", "")
+            )
+            for message in user_messages
+        ]
+
+        return await asyncio.gather(*tasks)
+
+    @staticmethod
+    def _extract_text(response) -> str:
+        """Normalize Chat Completions output to plain text."""
+
+        # Convert to dict early for consistent access across SDK shapes
+        dump = response.model_dump(exclude_none=True) if hasattr(response, "model_dump") else None
+        if dump:
+            choices_dump = dump.get("choices")
+            if choices_dump:
+                choice0 = choices_dump[0]
+                message_dump = choice0.get("message") if isinstance(choice0, dict) else None
+                content_dump = None
+                if message_dump:
+                    if "parsed" in message_dump:
+                        return LLMClient._parsed_to_text(message_dump["parsed"])
+                    if "refusal" in message_dump:
+                        return LLMClient._parsed_to_text(message_dump["refusal"])
+                    content_dump = message_dump.get("content")
+                if content_dump:
+                    return LLMClient._content_to_text(content_dump)
+
+        choices = getattr(response, "choices", None)
+        if not choices:
+            raise ValueError("Unexpected OpenAI response format: missing choices")
+
+        first = choices[0]
+        message = getattr(first, "message", None) or first.get("message") if isinstance(first, dict) else None
+
+        content = None
+
+        if message:
+            content = getattr(message, "content", None) or message.get("content") if isinstance(message, dict) else None
+
+            # If structured JSON is returned, it may live under `parsed`
+            parsed = getattr(message, "parsed", None) or message.get("parsed") if isinstance(message, dict) else None
+            if parsed is not None and (not content):
+                return LLMClient._parsed_to_text(parsed)
+
+            # Some SDK versions use `refusal` instead of content when blocked
+            refusal = getattr(message, "refusal", None) or message.get("refusal") if isinstance(message, dict) else None
+            if refusal is not None and not content:
+                return LLMClient._parsed_to_text(refusal)
+
+        # Some SDK versions may return content directly on the choice
+        if not content:
+            content = getattr(first, "content", None) or first.get("content") if isinstance(first, dict) else None
+
+        # As a fallback, serialize the message/choice/response structures
+        if content is None:
+            if message and hasattr(message, "model_dump"):
+                return LLMClient._parsed_to_text(message.model_dump(exclude_none=True))
+            if hasattr(first, "model_dump"):
+                return LLMClient._parsed_to_text(first.model_dump(exclude_none=True))
+            if hasattr(response, "model_dump"):
+                return LLMClient._parsed_to_text(response.model_dump(exclude_none=True))
+            raise ValueError("Unexpected OpenAI response format: missing content text")
+
+        return LLMClient._content_to_text(content)
+
+    @staticmethod
+    def _content_to_text(content) -> str:
+        """Flatten content blocks or strings into a plain text result."""
+
+        if isinstance(content, str):
+            return content
+
+        if isinstance(content, list):
+            parts = []
+            for item in content:
+                text = None
+                if isinstance(item, dict):
+                    text = item.get("text") or item.get("output_text") or item.get("value") or item.get("content")
                 else:
-                    logger.error(f"Unexpected response format: {type(data)}")
-                    raise Exception(f"Unexpected response format from HuggingFace")
-                
-                logger.info(f"Extracted result length: {len(result)} chars")
-                logger.debug(f"Raw extracted result:\n{result}")
-                
-                # Clean the result - extract JSON from the response
-                cleaned_result = self._extract_json(result)
-                logger.info(f"Cleaned result length: {len(cleaned_result)} chars")
-                logger.debug(f"Cleaned result:\n{cleaned_result}")
-                
-                # Validate it's proper JSON
-                try:
-                    parsed = json.loads(cleaned_result)
-                    logger.info("✅ Successfully parsed JSON response")
-                    logger.debug(f"Parsed JSON structure: {json.dumps(parsed, indent=2)[:500]}")
-                    return cleaned_result
-                except json.JSONDecodeError as e:
-                    logger.error(f"❌ Failed to parse JSON: {e}")
-                    logger.error(f"Invalid JSON content:\n{cleaned_result}")
-                    raise
-                    
-        except Exception as e:
-            logger.error("="*60)
-            logger.error("LLM COMPLETION FAILED")
-            logger.error(f"Error type: {type(e).__name__}")
-            logger.error(f"Error message: {str(e)}")
-            logger.error(f"Traceback:\n{traceback.format_exc()}")
-            logger.error("="*60)
-            raise
-    
-    def _extract_json(self, text: str) -> str:
-        """Extract JSON from the response text with logging"""
-        logger.debug("Extracting JSON from response...")
-        
-        # Remove any leading/trailing whitespace
-        text = text.strip()
-        
-        # Try to find JSON boundaries
-        if "{" in text and "}" in text:
-            # Find the first { and last }
-            start = text.find("{")
-            end = text.rfind("}") + 1
-            json_str = text[start:end]
-            logger.debug(f"Extracted JSON substring: {json_str[:200]}...")
-            return json_str
-        
-        # If no JSON markers found, try to clean common patterns
-        if "```json" in text:
-            logger.debug("Found markdown JSON block")
-            text = text.split("```json")[1].split("```")[0]
-        elif "```" in text:
-            logger.debug("Found markdown code block")
-            text = text.split("```")[1].split("```")[0]
-        
-        # Remove any remaining markdown or explanatory text
-        lines = text.split('\n')
-        json_lines = []
-        in_json = False
-        
-        for line in lines:
-            if '{' in line:
-                in_json = True
-            if in_json:
-                json_lines.append(line)
-            if '}' in line and in_json:
-                # Check if this closes all brackets
-                temp = '\n'.join(json_lines)
-                if temp.count('{') == temp.count('}'):
-                    break
-        
-        result = '\n'.join(json_lines) if json_lines else text
-        logger.debug(f"Final extracted text: {result[:200]}...")
-        return result
+                    text = (
+                        getattr(item, "text", None)
+                        or getattr(item, "output_text", None)
+                        or getattr(item, "value", None)
+                        or getattr(item, "content", None)
+                    )
+
+                if isinstance(text, (list, dict)):
+                    parts.append(LLMClient._parsed_to_text(text))
+                elif text is not None:
+                    parts.append(str(text))
+
+            return "".join(parts).strip()
+
+        return str(content)
+
+    @staticmethod
+    def _parsed_to_text(parsed) -> str:
+        """Convert parsed JSON content into a string payload."""
+
+        try:
+            return json.dumps(parsed)
+        except Exception:
+            return str(parsed)

@@ -17,7 +17,8 @@ async def test_llm():
     response = await client.complete(
         system_prompt="You are a classifier. Return only valid JSON.",
         user_message=test_prompt,
-        temperature=0.1
+        temperature=0.1,
+        max_tokens=200,
     )
     
     print("LLM Response:")

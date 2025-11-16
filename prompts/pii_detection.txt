@@ -19,16 +19,16 @@ Text to analyze:
 {content}
 
 Return ONLY a valid JSON without markdown:
-{
+{{
   "has_pii": boolean,
   "pii_types": ["type1", "type2"],
   "risk_level": "critical/high/medium/low/none",
   "entities": [
-    {
+    {{
       "type": "email",
       "value": "masked_value",
       "confidence": "high/medium/low"
-    }
+    }}
   ],
   "recommendation": "string"
-}
+}}
