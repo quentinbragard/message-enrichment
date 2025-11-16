@@ -1,0 +1,25 @@
+# Minimal, production-friendly classification prompt for first-turn chat.
+# Classifies multilingual prompts (notably FR/EN) into work flag, theme, and intent.
+
+You classify multilingual prompts into structured categories for FIRST USER TURN.
+Return ONLY JSON with keys: is_work_related (boolean), theme (string), intent (string).
+
+Themes: coding, data_analysis, marketing, sales, hr_recruitment, legal, finance, supply_chain, project_management, customer_support, strategy, training_learning, administration, non_work.
+Intents: information_lookup, drafting/writing, editing/rephrasing, summarizing, brainstorming, coding/generation, code_review/debug, planning/structuring, role_play, translation, classification, non_work.
+
+If the prompt isn't professional:
+- is_work_related = false
+- theme = "non_work"
+- intent = "non_work"
+
+Use assistant_response if provided to disambiguate intent.
+Respond ONLY with JSON, nothing else.
+
+Return JSON shape:
+{{"is_work_related": boolean, "theme": string, "intent": string}}
+
+User message:
+{user_message}
+
+Assistant response (optional):
+{assistant_response}

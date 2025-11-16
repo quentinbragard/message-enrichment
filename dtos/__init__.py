@@ -15,6 +15,12 @@ from .classification_dto import (
     QualityAnalysisDTO,
     PIIDetectionDTO
 )
+from .chat_enrichment_dto import (
+    ChatEnrichmentRequest,
+    ChatEnrichmentResponse,
+    PIIDetectRequest,
+    PIIDetectResponse,
+)
 
 __all__ = [
     # Enrichment DTOs
@@ -30,5 +36,10 @@ __all__ = [
     "TopicClassificationDTO",
     "IntentClassificationDTO",
     "QualityAnalysisDTO",
-    "PIIDetectionDTO"
+    "PIIDetectionDTO",
+    # Simple chat enrichment / PII detection
+    "ChatEnrichmentRequest",
+    "ChatEnrichmentResponse",
+    "PIIDetectRequest",
+    "PIIDetectResponse",
 ]
